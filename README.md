@@ -1,92 +1,89 @@
-# freehunt
+# ScrapingG4cor
 
-Free-proxy Amazon UK scraper. One workflow — `prep -> check -> fix -> hunt` — that combines
-[Jina Reader](https://jina.ai/reader) (free cloud render) with fresh free proxies and a local
-StealthyFetcher fallback. No paid API required for the core loop.
+Free scraper for all sites. One fetch chain, cheapest working layer wins.
+Works.
 
-![architecture](docs/architecture.svg)
+## How it works
 
-## Why this exists
-
-Amazon UK is guarded by AWS WAF, which rejects datacenter IPs at the reputation check.
-Two proven facts drive this project:
-
-1. **Gate 202 does not mean success.** A proxy can return HTTP 202 with a 1 KB empty page.
-   Only GBP-priced content counts (`pool_ranked.json` verdicts: GENUINE vs zombie).
-2. **Free proxies burn in minutes.** A proxy that yields 182 KB at 09:0x returns 246 empty
-   bytes at 09:1x. Refresh the pool on every hunt, validate content (not just gate), rotate.
-
-## Quickstart
-
-```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m playwright install chromium   # needed for L3 fallback
-export JINA_API_KEY=jina_...                      # or: python3 jina_combo.py set-key <KEY>
-
-python3 hunt_workflow.py auto "creatine" --max 100 --want 3
+```mermaid
+flowchart TD
+    URL --> L0[L0: anonymous Jina - $0]
+    L0 -- content verifies --> DONE[Done]
+    L0 -- empty --> L1[L1: keyed Jina - free key]
+    L1 -- content verifies --> DONE
+    L1 -- empty --> L2[L2: key + free proxy combo]
+    L2 -- content verifies --> DONE
+    L2 -- empty --> L3[L3: local fetch - direct, then proxy]
+    L3 --> DONE
 ```
 
-Keys are read from `JINA_API_KEY` / `JINA_KEY` env first, then `~/.jina_key` (chmod 600).
-Never hardcoded. `set-key` strips pasted spaces automatically.
+If anonymous Jina works, stop. If not, try with a Jina API key.
+If that fails, try key + free proxy. If that fails, fetch locally.
+Every layer is verified by content (price + product markers), never HTTP status alone.
 
-## The workflow
+## Sites
 
-```
-PREP  ->  CHECK  ->  FIX  ->  HUNT  ->  OUTPUT (hunt_out/*.json + *.md/*.html)
-```
+All sites in `sites.py` — one dict per site (URL template, method, success
+markers). New site = new dict, no workflow rewrite.
 
-| Command | What it does |
-|---|---|
-| `prep [--big]` | Fetch fresh pools (Proxifly GB ~300; `--big` adds general sources, thousands). Backs up old pools with timestamps. |
-| `check [--sample 50]` | Verdict per component: Jina live? Proxies alive? Prints Good / Bad + fix hint. |
-| `hunt "kw1" "kw2" [--max 50] [--want 3]` | Auto check+fix, then per keyword: Jina probe (free) -> Jina+proxy combo -> **L3 fallback** (local StealthyFetcher + ranked pool). |
-| `auto ...` | `prep` + `hunt` in one go. |
-| `set-jina-key <KEY>` | Store/refresh the Jina key (`~/.jina_key`, chmod 600). |
-| `jina_combo.py fetch URL [--proxy ...]` | Single Jina request with summary stats (no full-body dump). |
-| `rotator.py fetch URL [--max 5]` | L3 fetch through ranked proxies, auto-advance on failure. |
-| `uscraper.py selftest / probe / validate / fetch / bd-*` | Ladder primitives + proxy gate validator + optional Bright Data L5. |
+| Site key | Site | Fetch method |
+|---|---|---|
+| `amazon-uk` | Amazon UK | Jina render + GB proxy + key; L3 StealthyFetcher fallback (AWS WAF) |
+| `active-sports-nutrition` | Active Sports Nutrition | Search pages `?q=&size=100&skip=0..300`, tile split, price from `finalPrice.amountIncVat` |
+| `dolphin-fitness` | Dolphin Fitness | List pages `/en/creatine/list/1..9`, cell split, lowest `£` per cell |
+| `holland-and-barrett` | Holland & Barrett | Jina Reader (direct returns 202 challenge), markdown product links |
+| `applied-nutrition` | Applied Nutrition | Shopify `/products.json` paginated, variant price + barcode |
+| `10x-athletic` | 10X Athletic | Shopify `/products.json` paginated, variant price + barcode |
+| `animal-pak` | Animal Pak | Shopify `/products.json` paginated, variant price + barcode |
+| `cellucor-uk` | Cellucor UK | Homepage `/product/*` links, price from JSON-LD, barcode from `gtin13` |
+| `iherb-uk` | iHerb UK | Search pages `?kw=&p=1..20`, split on `data-product-id`, Jina fallback |
+| `reflex-nutrition` | Reflex Nutrition | Shopify `/products.json` paginated, variant price + barcode |
 
-Flags: `--no-content-check` (gate-only verdicts, fast but weak),
-`--no-l3` (Jina only), `--l3-max N` (L3 fallback pool size per keyword).
-
-## Measured numbers (2026-10-07/08, live runs)
-
-| Setup | Result |
-|---|---|
-| Jina + fresh GB proxy (B7) | 344 KB / 52 ASIN / **287 GBP prices** / 55 ratings / US-free |
-| L3 local StealthyFetcher (ranked proxy) | HTTP 200 / 1.08 MB / 55 ASIN / **54 GBP** / SUCCESS |
-| Jina no-proxy probe | 49-50 ASIN, **0 GBP** (US locale) — free ASIN discovery |
-| GB pool gate-alive | ~1.7-3% (240 checked -> 4 gate-alive) |
-| Content-check of 15 gate-alive | **7 GENUINE** (`pool_ranked.json`) |
-| `uscraper.py selftest` | 6/6 offline PASS |
-
-## Honest limits
-
-- **Jina default output strips prices.** Readability drops `.a-price` as noise; locale is US.
-  `X-Target-Selector: .a-price` recovers USD prices only. GBP needs `X-Proxy-Url` + GB proxy.
-- **Jina vs Amazon is query-dependent.** 1-word queries passed (HTTP 200), 2-word queries got
-  503 on the same day. WAF strictness fluctuates; the L3 fallback exists for this.
-- **Parent selectors don't work on Jina** (`[data-component-type]`, `.s-result-item` -> 422):
-  Jina matches selectors after readability cleanup, so ASIN<->price mapping via Jina alone
-  is a dead end. Split labour instead: Jina harvests links, L3 fetches prices.
-- **`X-Proxy: gb` (residential) needs a premium Jina plan** (402 on free key). `X-Proxy-Url`
-  with your own proxy works on the free key (500 RPM).
-- Free proxies die fast. General (non-GB) pools have higher gate-alive rates but weaker GBP
-  yields. For final GBP prices prefer GB exits or Bright Data L5 (optional, paid).
+If a product has no match on a site, it means that product is sold on only
+1 site (no competitor carries it) — not a scraper failure.
 
 ## Files
 
-| File | Role |
+| File | Does |
 |---|---|
-| `hunt_workflow.py` | prep/check/fix/hunt orchestrator + Jina->L3 fallback |
-| `jina_combo.py` | Jina auto-key + single fetch + combo search |
-| `rotator.py` | L3 ranked-pool rotator (fail -> next proxy) |
-| `uscraper.py` | L0/L1/L3/L5 ladder + signal detector + gate validator + GBP-guard |
-| `requirements.txt` | `scrapling[fetchers]`, `playwright` (system `curl` also required) |
-| `docs/architecture.svg` | architecture diagram (source of truth; PNG is rendered) |
+| `fetch_chain.py` | The chain: `sites` lists targets, `fetch URL --site <key>` runs L0→L1→L2→L3 |
+| `sites.py` | Site registry (URL, method, markers, notes) |
+| `get_key.py` | Jina key helper: `guide` (where to get a free key), `set` (validate + store), `status` |
+| `jina_combo.py` | Keyed Jina fetch + proxy combo primitives |
+| `hunt_workflow.py` | Batch workflow: `prep` pools → `check` → `fix` → `hunt` keywords (Amazon-tuned) |
+| `rotator.py` | Ranked-proxy rotator (fail → next proxy) |
+| `uscraper.py` | Ladder L0/L1/L3/L5 + signal detector + proxy validator |
 
-Pools (`pool_*.txt`), rankings (`pool_ranked.json`) and outputs (`hunt_out/`, `*.html`)
-are git-ignored: regenerate with `prep` every hunt.
+## Usage
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+# 1. List all sites
+python3 fetch_chain.py sites
+
+# 2. Fetch one page (anonymous Jina first — free, no key)
+python3 fetch_chain.py fetch "https://www.hollandandbarrett.com/shop/sports-nutrition/creatine/" --site holland-and-barrett
+
+# 3. If L0 is empty, get a free Jina key, then retry (unlocks L1 + L2)
+python3 get_key.py guide
+python3 get_key.py set
+python3 get_key.py status
+
+# 4. Batch hunts (Amazon-tuned) + free-proxy pool refresh
+python3 hunt_workflow.py auto "creatine" --max 100 --want 3
+python3 rotator.py fetch "https://www.amazon.co.uk/s?k=creatine" --max 5
+```
+
+Keys live in env (`JINA_API_KEY`) or `~/.jina_key` (chmod 600).
+Never hardcoded, never committed.
+
+## Notes
+
+- Cheap first, expensive last. Anonymous Jina ($0) before key, key before proxy.
+- Content verdicts only: price + product markers must be present, or the layer counts as empty.
+- Free proxies burn in minutes — refresh the pool on every hunt (`prep`), never trust yesterday's pool.
+- Gate 202 is NOT success (challenge page, not content).
 
 ## License
 
