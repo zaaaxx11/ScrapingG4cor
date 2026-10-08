@@ -1,6 +1,6 @@
 # ScrapingG4cor
 
-Free scraper for all sites. One fetch chain, cheapest working layer wins.
+Free scraper for any site. One command, cheapest working layer wins.
 Works.
 
 ## How it works
@@ -17,83 +17,57 @@ flowchart TD
     L3 --> DONE
 ```
 
-If anonymous Jina works, stop. If not, try with a Jina API key.
+If anonymous Jina works, stop. If not, try with a free Jina API key.
 If that fails, try key + free proxy. If that fails, fetch locally.
-Every layer is verified by content (price + product markers), never HTTP status alone.
-
-## Sites
-
-All sites in `sites.py` — one dict per site (URL template, method, success
-markers). New site = new dict, no workflow rewrite.
-
-| Site key | Site | Fetch method |
-|---|---|---|
-| `amazon-uk` | Amazon UK | Jina render + GB proxy + key; L3 StealthyFetcher fallback (AWS WAF) |
-| `active-sports-nutrition` | Active Sports Nutrition | Search pages `?q=&size=100&skip=0..300`, tile split, price from `finalPrice.amountIncVat` |
-| `dolphin-fitness` | Dolphin Fitness | List pages `/en/creatine/list/1..9`, cell split, lowest `£` per cell |
-| `holland-and-barrett` | Holland & Barrett | Jina Reader (direct returns 202 challenge), markdown product links |
-| `applied-nutrition` | Applied Nutrition | Shopify `/products.json` paginated, variant price + barcode |
-| `10x-athletic` | 10X Athletic | Shopify `/products.json` paginated, variant price + barcode |
-| `animal-pak` | Animal Pak | Shopify `/products.json` paginated, variant price + barcode |
-| `cellucor-uk` | Cellucor UK | Homepage `/product/*` links, price from JSON-LD, barcode from `gtin13` |
-| `iherb-uk` | iHerb UK | Search pages `?kw=&p=1..20`, split on `data-product-id`, Jina fallback |
-| `reflex-nutrition` | Reflex Nutrition | Shopify `/products.json` paginated, variant price + barcode |
-
-If a product has no match on a site, it means that product is sold on only
-1 site (no competitor carries it) — not a scraper failure.
-
-## Your own targets
-
-You decide the sites. Builtins are just defaults — register your own and
-fetch with them the same way:
-
-```bash
-python3 fetch_chain.py sites      # builtin + yours (yours tagged [yours])
-python3 fetch_chain.py my-sites   # yours only
-
-python3 fetch_chain.py add-site my-shop "https://example.com/search?q={q}" \
-  --kind search-page --price "£,$" --ok "Add to Cart"
-python3 fetch_chain.py fetch "https://example.com/search?q=creatine" --site my-shop
-python3 fetch_chain.py remove-site my-shop
-```
-
-`{q}` in the URL is the keyword slot (optional — fixed catalog URLs work too).
-`--ok` defaults to the URL hostname; `--price` defaults to `£`.
-Your targets live in `targets.json` next to the scripts (chmod 600,
-git-ignored — never pushed). `targets.example.json` shows the file shape.
-
-## Files
-
-| File | Does |
-|---|---|
-| `fetch_chain.py` | The chain: `sites` lists targets, `fetch URL --site <key>` runs L0→L1→L2→L3, `add-site` / `my-sites` / `remove-site` manage YOUR targets |
-| `sites.py` | Site registry: builtin defaults + YOUR `targets.json` (you win on clash) |
-| `get_key.py` | Jina key helper: `guide` (where to get a free key), `set` (validate + store), `status` |
-| `jina_combo.py` | Keyed Jina fetch + proxy combo primitives |
-| `hunt_workflow.py` | Batch workflow: `prep` pools → `check` → `fix` → `hunt` keywords (Amazon-tuned) |
-| `rotator.py` | Ranked-proxy rotator (fail → next proxy) |
-| `uscraper.py` | Ladder L0/L1/L3/L5 + signal detector + proxy validator |
+Every layer is verified by content (price + product markers), never HTTP
+status alone.
 
 ## Usage
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-# 1. List all sites
-python3 fetch_chain.py sites
+# Fetch any page (anonymous Jina first — free, no key needed)
+python3 scrape.py fetch "https://example.com/search?q=shoes"
 
-# 2. Fetch one page (anonymous Jina first — free, no key)
-python3 fetch_chain.py fetch "https://www.hollandandbarrett.com/shop/sports-nutrition/creatine/" --site holland-and-barrett
+# Your own targets (you decide the sites)
+python3 scrape.py sites      # builtin + yours (yours tagged [yours])
+python3 scrape.py my-sites   # yours only
+python3 scrape.py add-site my-shop "https://example.com/search?q={q}" \
+  --price "£,$" --ok "Add to Cart"
+python3 scrape.py fetch "https://example.com/search?q=shoes" --site my-shop
+python3 scrape.py remove-site my-shop
 
-# 3. If L0 is empty, get a free Jina key, then retry (unlocks L1 + L2)
-python3 get_key.py guide
-python3 get_key.py set
-python3 get_key.py status
+# If L0 is empty, grab a free Jina key (unlocks L1 + L2), then retry
+python3 scrape.py key guide
+python3 scrape.py key set
+python3 scrape.py key status
 
-# 4. Batch hunts (Amazon-tuned) + free-proxy pool refresh
-python3 hunt_workflow.py auto "creatine" --max 100 --want 3
-python3 rotator.py fetch "https://www.amazon.co.uk/s?k=creatine" --max 5
+# Batch hunts + free-proxy pool refresh
+python3 scrape.py prep
+python3 scrape.py hunt "shoes" "boots" --max 100 --want 3
 ```
+
+`{q}` in a target URL is the keyword slot (optional — fixed catalog URLs
+work too). `--ok` defaults to the URL hostname; `--price` defaults to `£`.
+Your targets live in `targets.json` next to the scripts (chmod 600,
+git-ignored — never pushed). `targets.example.json` shows the file shape.
+
+If a product has no match on a site, it means that site does not carry it —
+not a scraper failure.
+
+## Files
+
+| File | Does |
+|---|---|
+| `scrape.py` | The one door — every command above routes through here |
+| `fetch_chain.py` | The chain L0→L1→L2→L3 + your-target commands |
+| `sites.py` | Builtin defaults + YOUR `targets.json` (you win on clash) |
+| `get_key.py` | Jina key helper (`guide` / `set` / `status`) |
+| `jina_combo.py` | Keyed Jina fetch + proxy combo primitives |
+| `hunt_workflow.py` | Batch workflow: `prep` pools → `check` → `fix` → `hunt` |
+| `rotator.py` | Ranked-proxy rotator (fail → next proxy) |
+| `uscraper.py` | Ladder L0/L1/L3/L5 + signal detector + proxy validator |
 
 Keys live in env (`JINA_API_KEY`) or `~/.jina_key` (chmod 600).
 Never hardcoded, never committed.
