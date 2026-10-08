@@ -1,0 +1,6 @@
+# freehunt - free-proxy Amazon UK scraper
+# Python >= 3.11, system `curl` required (all HTTP goes through subprocess).
+# After install:  playwright install chromium   (needed for L3 StealthyFetcher)
+
+scrapling[fetchers]==0.4.15
+playwright==1.63.0

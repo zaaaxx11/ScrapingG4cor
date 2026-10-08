@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" font-family="sans-serif">
+<rect width="1600" height="1000" fill="#0f1420"/>
+<text x="800" y="52" text-anchor="middle" fill="#f0f4ff" font-size="30" font-weight="bold">freehunt - prep, check, fix, hunt (one workflow)</text>
+
+<defs>
+<marker id="aB" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#4d7cfe"/></marker>
+<marker id="aG" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3ddc84"/></marker>
+<marker id="aR" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ff5d5d"/></marker>
+</defs>
+
+<!-- ===== A. PIPELINE ===== -->
+<text x="30" y="102" fill="#8fa3c8" font-size="22" font-weight="bold">A. Hunt pipeline (run every hunt - proxies burn in minutes)</text>
+<g font-size="20" text-anchor="middle">
+<rect x="20" y="118" width="296" height="118" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="168" y="152" fill="#fff"><tspan x="168" dy="0">1. PREP</tspan><tspan x="168" dy="26" fill="#8fa3c8">fresh pools GB ~300</tspan><tspan x="168" dy="26" fill="#8fa3c8">--big: thousands</tspan></text>
+<rect x="336" y="118" width="296" height="118" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="484" y="152" fill="#fff"><tspan x="484" dy="0">2. CHECK</tspan><tspan x="484" dy="26" fill="#8fa3c8">Jina live? proxies?</tspan><tspan x="484" dy="26" fill="#8fa3c8">Good / Bad per part</tspan></text>
+<rect x="652" y="118" width="296" height="118" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="800" y="152" fill="#fff"><tspan x="800" dy="0">3. FIX</tspan><tspan x="800" dy="26" fill="#8fa3c8">gate 202, then</tspan><tspan x="800" dy="26" fill="#8fa3c8">GBP content-check</tspan></text>
+<rect x="968" y="118" width="296" height="118" rx="10" fill="#1b2a4a" stroke="#3ddc84" stroke-width="2"/>
+<text x="1116" y="152" fill="#fff"><tspan x="1116" dy="0">4. HUNT</tspan><tspan x="1116" dy="26" fill="#8fa3c8">Jina combo, then</tspan><tspan x="1116" dy="26" fill="#8fa3c8">L3 fallback</tspan></text>
+<rect x="1284" y="118" width="296" height="118" rx="10" fill="#123f2b" stroke="#3ddc84" stroke-width="2"/>
+<text x="1432" y="152" fill="#fff"><tspan x="1432" dy="0">5. OUTPUT</tspan><tspan x="1432" dy="26" fill="#8fa3c8">hunt_out/*.json</tspan><tspan x="1432" dy="26" fill="#8fa3c8">+ .md / .html</tspan></text>
+</g>
+<g stroke="#4d7cfe" stroke-width="3" fill="none">
+<line x1="316" y1="177" x2="332" y2="177" marker-end="url(#aB)"/>
+<line x1="632" y1="177" x2="648" y2="177" marker-end="url(#aB)"/>
+<line x1="948" y1="177" x2="964" y2="177" marker-end="url(#aB)"/>
+<line x1="1264" y1="177" x2="1280" y2="177" marker-end="url(#aG)"/>
+</g>
+<text x="800" y="262" text-anchor="middle" fill="#ffb3b3" font-size="20">Bad Jina - refresh key (set-jina-key) &#160;&#160;|&#160;&#160; Bad proxy - refresh + search batches + content-check until want=N GENUINE</text>
+
+<!-- ===== B. HUNT INTERNALS ===== -->
+<text x="30" y="306" fill="#8fa3c8" font-size="22" font-weight="bold">B. Inside one keyword hunt (cheapest first)</text>
+<g font-size="20" text-anchor="middle">
+<rect x="20" y="322" width="480" height="130" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="260" y="356" fill="#fff"><tspan x="260" dy="0">Step 1 - Jina probe, no proxy ($0)</tspan><tspan x="260" dy="28" fill="#8fa3c8">49-50 ASIN free, 0 GBP (US locale)</tspan><tspan x="260" dy="28" fill="#8fa3c8">GBP pass? STOP, else continue</tspan></text>
+<rect x="560" y="322" width="480" height="130" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="800" y="356" fill="#fff"><tspan x="800" dy="0">Step 2 - Jina + GB proxy combo</tspan><tspan x="800" dy="28" fill="#8fa3c8">X-Proxy-Url + x-no-cache + timeout 60</tspan><tspan x="800" dy="28" fill="#8fa3c8">proven: 344 KB / 52 ASIN / 287 GBP</tspan></text>
+<rect x="1100" y="322" width="480" height="130" rx="10" fill="#2a2135" stroke="#b48cf2" stroke-width="2"/>
+<text x="1340" y="356" fill="#fff"><tspan x="1340" dy="0">Step 3 - L3 fallback (local)</tspan><tspan x="1340" dy="28" fill="#8fa3c8">StealthyFetcher + ranked pool</tspan><tspan x="1340" dy="28" fill="#8fa3c8">proven: 200 / 1.08 MB / 54 GBP</tspan></text>
+</g>
+<g stroke="#4d7cfe" stroke-width="3" fill="none">
+<line x1="500" y1="387" x2="556" y2="387" marker-end="url(#aB)"/>
+<line x1="1040" y1="387" x2="1096" y2="387" marker-end="url(#aB)"/>
+</g>
+<text x="800" y="480" text-anchor="middle" fill="#8fa3c8" font-size="20">Every step gated by GBP-guard (min 5 GBP-priced cards) + US-locale reject + ASIN count. Gate 202 alone never counts.</text>
+
+<!-- ===== C. FILES ===== -->
+<text x="30" y="524" fill="#8fa3c8" font-size="22" font-weight="bold">C. One repo, one app - four files</text>
+<g font-size="20" text-anchor="middle">
+<rect x="20" y="540" width="370" height="150" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="205" y="572" fill="#fff"><tspan x="205" dy="0">hunt_workflow.py</tspan><tspan x="205" dy="28" fill="#8fa3c8">orchestrator: prep,</tspan><tspan x="205" dy="28" fill="#8fa3c8">check, fix, hunt,</tspan><tspan x="205" dy="28" fill="#8fa3c8">Jina-to-L3 fallback</tspan></text>
+<rect x="410" y="540" width="370" height="150" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="595" y="572" fill="#fff"><tspan x="595" dy="0">jina_combo.py</tspan><tspan x="595" dy="28" fill="#8fa3c8">auto-key, 1 req fetch,</tspan><tspan x="595" dy="28" fill="#8fa3c8">combo search, probe,</tspan><tspan x="595" dy="28" fill="#8fa3c8">content stats</tspan></text>
+<rect x="800" y="540" width="370" height="150" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="985" y="572" fill="#fff"><tspan x="985" dy="0">rotator.py</tspan><tspan x="985" dy="28" fill="#8fa3c8">ranked pool loader,</tspan><tspan x="985" dy="28" fill="#8fa3c8">fail to next proxy,</tspan><tspan x="985" dy="28" fill="#8fa3c8">cooldown, hunt</tspan></text>
+<rect x="1190" y="540" width="390" height="150" rx="10" fill="#1b2a4a" stroke="#4d7cfe" stroke-width="2"/>
+<text x="1385" y="572" fill="#fff"><tspan x="1385" dy="0">uscraper.py</tspan><tspan x="1385" dy="28" fill="#8fa3c8">L0/L1/L3/L5 ladder,</tspan><tspan x="1385" dy="28" fill="#8fa3c8">signal detector,</tspan><tspan x="1385" dy="28" fill="#8fa3c8">gate validator, GBP-guard</tspan></text>
+</g>
+
+<!-- ===== D. LIMITS ===== -->
+<text x="30" y="734" fill="#8fa3c8" font-size="22" font-weight="bold">D. Honest limits (measured, not assumed)</text>
+<g font-size="20" text-anchor="middle">
+<rect x="20" y="750" width="760" height="96" rx="10" fill="#3d1e1e" stroke="#ff5d5d" stroke-width="2"/>
+<text x="400" y="784" fill="#ffb3b3"><tspan x="400" dy="0">Gate 202 is NOT success: 3 GB + 20 general alive</tspan><tspan x="400" dy="28" fill="#ffb3b3">all returned 1 KB empty pages (zombies)</tspan></text>
+<rect x="800" y="750" width="780" height="96" rx="10" fill="#3d1e1e" stroke="#ff5d5d" stroke-width="2"/>
+<text x="1190" y="784" fill="#ffb3b3"><tspan x="1190" dy="0">Free proxies burn in minutes: 182 KB at 09:0x</tspan><tspan x="1190" dy="28" fill="#ffb3b3">246 empty bytes at 09:1x - refresh every hunt</tspan></text>
+<rect x="20" y="862" width="760" height="96" rx="10" fill="#3d1e1e" stroke="#ff5d5d" stroke-width="2"/>
+<text x="400" y="896" fill="#ffb3b3"><tspan x="400" dy="0">Jina default strips prices (0 GBP) + US locale;</tspan><tspan x="400" dy="28" fill="#ffb3b3">parent selectors return 422 - split labour instead</tspan></text>
+<rect x="800" y="862" width="780" height="96" rx="10" fill="#2a2135" stroke="#b48cf2" stroke-width="2"/>
+<text x="1190" y="896" fill="#fff"><tspan x="1190" dy="0">Keys: JINA_API_KEY env, then ~/.jina_key (600).</tspan><tspan x="1190" dy="28" fill="#8fa3c8">Never hardcoded, never committed (.gitignore).</tspan></text>
+</g>
+</svg>
