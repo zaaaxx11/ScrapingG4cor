@@ -269,7 +269,24 @@ def main(argv=None) -> int:
                                  description="L0 anon-Jina -> L1 key -> "
                                              "L2 key+proxy -> L3 local")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("sites", help="list supported sites + methods")
+    sub.add_parser("sites", help="list supported sites + methods "
+                                 "(builtin + yours)")
+    g = sub.add_parser("my-sites", help="list YOUR targets only")
+    a = sub.add_parser("add-site", help="register YOUR target site")
+    a.add_argument("key", help="short name, e.g. my-shop")
+    a.add_argument("url", help="search or catalog URL "
+                               "({q} = keyword slot, optional)")
+    a.add_argument("--label", default=None)
+    a.add_argument("--kind", default="generic",
+                   help="waf|search-page|shopify|product-pages|generic")
+    a.add_argument("--price", default="£",
+                   help="comma-separated price markers")
+    a.add_argument("--ok", default=None,
+                   help="comma-separated product markers "
+                        "(default: hostname)")
+    a.add_argument("--min-len", type=int, default=3000)
+    r = sub.add_parser("remove-site", help="delete YOUR target site")
+    r.add_argument("key")
     f = sub.add_parser("fetch", help="fetch 1 URL through the chain")
     f.add_argument("url")
     f.add_argument("--site", default="amazon-uk",
@@ -285,8 +302,45 @@ def main(argv=None) -> int:
     if a.cmd == "sites":
         for name in SITES.names():
             s = SITES.get(name)
-            print(f"{name:26} {s['label']:28} {s['method'][:80]}")
+            tag = " [yours]" if name in SITES.user_sites() else ""
+            print(f"{name:26} {s.get('label', name):28} "
+                  f"{s.get('method', '')[:70]}{tag}")
         return 0
+    if a.cmd == "my-sites":
+        yours = SITES.user_sites()
+        if not yours:
+            print("no user targets yet (see: add-site --help, "
+                  "targets.example.json)")
+            return 0
+        for name, s in yours.items():
+            print(f"{name:26} {s.get('label', name):28} "
+                  f"{s.get('search_url', '')[:80]}")
+        return 0
+    if a.cmd == "add-site":
+        from urllib.parse import urlparse
+        host = urlparse(a.url).hostname or ""
+        ok = [m.strip() for m in (a.ok.split(",") if a.ok else [host])
+              if m.strip()]
+        price = [m.strip() for m in a.price.split(",") if m.strip()]
+        entry = {"label": a.label or a.key, "kind": a.kind,
+                 "search_url": a.url,
+                 "method": f"user target ({a.kind})",
+                 "price_markers": price, "ok_markers": ok,
+                 "min_len": a.min_len, "notes": "user-defined target"}
+        try:
+            path = SITES.add_user_site(a.key, entry)
+        except ValueError as e:
+            print(f"REJECTED: {e}")
+            return 2
+        print(f"saved '{a.key}' -> {path} "
+              f"(fetch with: --site {a.key})")
+        return 0
+    if a.cmd == "remove-site":
+        if SITES.remove_user_site(a.key):
+            print(f"removed '{a.key}'")
+            return 0
+        print(f"not found (yours: {list(SITES.user_sites()) or 'none'})")
+        return 2
     if a.cmd == "fetch":
         r = fetch(a.url, site=a.site, pool_file=a.pool,
                   timeout=a.timeout, use_l3=not a.no_l3)

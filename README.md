@@ -42,12 +42,32 @@ markers). New site = new dict, no workflow rewrite.
 If a product has no match on a site, it means that product is sold on only
 1 site (no competitor carries it) — not a scraper failure.
 
+## Your own targets
+
+You decide the sites. Builtins are just defaults — register your own and
+fetch with them the same way:
+
+```bash
+python3 fetch_chain.py sites      # builtin + yours (yours tagged [yours])
+python3 fetch_chain.py my-sites   # yours only
+
+python3 fetch_chain.py add-site my-shop "https://example.com/search?q={q}" \
+  --kind search-page --price "£,$" --ok "Add to Cart"
+python3 fetch_chain.py fetch "https://example.com/search?q=creatine" --site my-shop
+python3 fetch_chain.py remove-site my-shop
+```
+
+`{q}` in the URL is the keyword slot (optional — fixed catalog URLs work too).
+`--ok` defaults to the URL hostname; `--price` defaults to `£`.
+Your targets live in `targets.json` next to the scripts (chmod 600,
+git-ignored — never pushed). `targets.example.json` shows the file shape.
+
 ## Files
 
 | File | Does |
 |---|---|
-| `fetch_chain.py` | The chain: `sites` lists targets, `fetch URL --site <key>` runs L0→L1→L2→L3 |
-| `sites.py` | Site registry (URL, method, markers, notes) |
+| `fetch_chain.py` | The chain: `sites` lists targets, `fetch URL --site <key>` runs L0→L1→L2→L3, `add-site` / `my-sites` / `remove-site` manage YOUR targets |
+| `sites.py` | Site registry: builtin defaults + YOUR `targets.json` (you win on clash) |
 | `get_key.py` | Jina key helper: `guide` (where to get a free key), `set` (validate + store), `status` |
 | `jina_combo.py` | Keyed Jina fetch + proxy combo primitives |
 | `hunt_workflow.py` | Batch workflow: `prep` pools → `check` → `fix` → `hunt` keywords (Amazon-tuned) |

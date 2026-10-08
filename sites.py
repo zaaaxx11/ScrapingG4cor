@@ -130,12 +130,70 @@ SITES = {
 
 DEFAULT_SITE = "amazon-uk"
 
+USER_FILE = "targets.json"
+
+
+def _user_path() -> str:
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, USER_FILE)
+
+
+def user_sites() -> dict:
+    """Sites the USER defined (targets.json, git-ignored)."""
+    import json
+    import os
+    try:
+        with open(_user_path(), errors="ignore") as fh:
+            d = json.load(fh)
+        sites = d.get("sites", {}) if isinstance(d, dict) else {}
+        return sites if isinstance(sites, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def merged() -> dict:
+    """Builtin defaults + user targets (user wins on key clash)."""
+    m = dict(SITES)
+    m.update(user_sites())
+    return m
+
+
+def add_user_site(key: str, entry: dict) -> str:
+    """Save a user-defined target into targets.json. Return the path."""
+    import json
+    import os
+    k = (key or "").strip().lower().replace(" ", "-")
+    if not k or not isinstance(entry, dict) or not entry.get("search_url"):
+        raise ValueError("need a key + entry with at least search_url")
+    path = _user_path()
+    data = {"sites": user_sites()}
+    data["sites"][k] = entry
+    with open(path, "w") as fh:
+        json.dump(data, fh, indent=1, ensure_ascii=False)
+    os.chmod(path, 0o600)
+    return path
+
+
+def remove_user_site(key: str) -> bool:
+    """Delete a user-defined target. True if it existed."""
+    import json
+    k = (key or "").strip().lower()
+    data = {"sites": user_sites()}
+    if k not in data["sites"]:
+        return False
+    del data["sites"][k]
+    with open(_user_path(), "w") as fh:
+        json.dump(data, fh, indent=1, ensure_ascii=False)
+    return True
+
 
 def get(name: str) -> dict:
-    """Return the site dict, falling back to amazon-uk on unknown names."""
-    return SITES.get((name or "").lower(), SITES[DEFAULT_SITE])
+    """Return the site dict (user targets win), fallback to amazon-uk."""
+    m = merged()
+    return m.get((name or "").lower(), m[DEFAULT_SITE])
 
 
 def names() -> list:
-    """All supported site keys (stable order)."""
-    return list(SITES)
+    """All supported site keys: builtin + user-defined (stable order)."""
+    return list(merged())
